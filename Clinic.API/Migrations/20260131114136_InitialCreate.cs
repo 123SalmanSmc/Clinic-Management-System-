@@ -24,10 +24,7 @@ namespace Clinic.API.Migrations
                     DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Gender = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     BloodType = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Weight = table.Column<decimal>(type: "decimal(5,2)", nullable: true),
-                    Height = table.Column<decimal>(type: "decimal(5,2)", nullable: true),
-                    OtherMedicalNotes = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -51,6 +48,35 @@ namespace Clinic.API.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Payments", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Permissions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    RoutePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Group = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Permissions", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Roles",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Roles", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -108,7 +134,9 @@ namespace Clinic.API.Migrations
                     IsDefaultTax = table.Column<bool>(type: "bit", nullable: false),
                     IsRegisteredAuthority = table.Column<bool>(type: "bit", nullable: false),
                     RegistrationNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    RegistrationDate = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    RegistrationDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    Ratio = table.Column<decimal>(type: "decimal(18,4)", precision: 18, scale: 4, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -116,22 +144,25 @@ namespace Clinic.API.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "MedicalNotes",
+                name: "RolePermissions",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    PatientId = table.Column<int>(type: "int", nullable: false),
-                    Note = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    RoleId = table.Column<int>(type: "int", nullable: false),
+                    PermissionId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_MedicalNotes", x => x.Id);
+                    table.PrimaryKey("PK_RolePermissions", x => new { x.RoleId, x.PermissionId });
                     table.ForeignKey(
-                        name: "FK_MedicalNotes_Patients_PatientId",
-                        column: x => x.PatientId,
-                        principalTable: "Patients",
+                        name: "FK_RolePermissions_Permissions_PermissionId",
+                        column: x => x.PermissionId,
+                        principalTable: "Permissions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_RolePermissions_Roles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "Roles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -236,18 +267,49 @@ namespace Clinic.API.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Username = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Role = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    StaffId = table.Column<int>(type: "int", nullable: true)
+                    StaffId = table.Column<int>(type: "int", nullable: true),
+                    RoleId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Users", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Users_Roles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "Roles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Users_Staffs_StaffId",
                         column: x => x.StaffId,
                         principalTable: "Staffs",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MedicalNotes",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    AppointmentId = table.Column<int>(type: "int", nullable: false),
+                    Diagnosis = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Symptoms = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Treatment = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Prescription = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MedicalNotes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MedicalNotes_Appointments_AppointmentId",
+                        column: x => x.AppointmentId,
+                        principalTable: "Appointments",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -310,6 +372,16 @@ namespace Clinic.API.Migrations
                 });
 
             migrationBuilder.InsertData(
+                table: "Roles",
+                columns: new[] { "Id", "Description", "Name" },
+                values: new object[,]
+                {
+                    { 1, "Full access", "Admin" },
+                    { 2, "Access to appointments and patients", "Doctor" },
+                    { 3, "Limited access", "Staff" }
+                });
+
+            migrationBuilder.InsertData(
                 table: "StaffTypes",
                 columns: new[] { "Id", "IsDoctor", "Name" },
                 values: new object[,]
@@ -320,8 +392,13 @@ namespace Clinic.API.Migrations
 
             migrationBuilder.InsertData(
                 table: "Taxes",
-                columns: new[] { "Id", "Category", "IsDefaultTax", "IsRegisteredAuthority", "RegistrationDate", "RegistrationNumber", "TaxName", "Type" },
-                values: new object[] { 1, "General", true, false, null, null, "VAT", "Percentage" });
+                columns: new[] { "Id", "Category", "IsDefaultTax", "IsRegisteredAuthority", "Ratio", "RegistrationDate", "RegistrationNumber", "Status", "TaxName", "Type" },
+                values: new object[] { 1, "General", true, false, 0m, null, null, 1, "VAT", "Percentage" });
+
+            migrationBuilder.InsertData(
+                table: "Users",
+                columns: new[] { "Id", "PasswordHash", "RoleId", "StaffId", "Username" },
+                values: new object[] { 1, "1BDF7BABB5FB79DD23C5E743207594513236923AC552132A3CE334637215DAE0-E5D489B2753578736047D93A8AB484BF", 1, null, "admin" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Appointments_DoctorId",
@@ -334,9 +411,14 @@ namespace Clinic.API.Migrations
                 column: "PatientId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MedicalNotes_PatientId",
+                name: "IX_MedicalNotes_AppointmentId",
                 table: "MedicalNotes",
-                column: "PatientId");
+                column: "AppointmentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RolePermissions_PermissionId",
+                table: "RolePermissions",
+                column: "PermissionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ServiceAssignmentDetails_ServiceAssignmentId",
@@ -374,6 +456,11 @@ namespace Clinic.API.Migrations
                 column: "StaffTypeId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Users_RoleId",
+                table: "Users",
+                column: "RoleId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Users_StaffId",
                 table: "Users",
                 column: "StaffId");
@@ -389,6 +476,9 @@ namespace Clinic.API.Migrations
                 name: "Payments");
 
             migrationBuilder.DropTable(
+                name: "RolePermissions");
+
+            migrationBuilder.DropTable(
                 name: "ServiceAssignmentDetails");
 
             migrationBuilder.DropTable(
@@ -398,10 +488,16 @@ namespace Clinic.API.Migrations
                 name: "Users");
 
             migrationBuilder.DropTable(
+                name: "Permissions");
+
+            migrationBuilder.DropTable(
                 name: "ServiceAssignments");
 
             migrationBuilder.DropTable(
                 name: "ServiceTypes");
+
+            migrationBuilder.DropTable(
+                name: "Roles");
 
             migrationBuilder.DropTable(
                 name: "Appointments");

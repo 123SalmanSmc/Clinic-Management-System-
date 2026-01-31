@@ -500,7 +500,8 @@ namespace Clinic.API.Migrations
                         .HasColumnType("bit");
 
                     b.Property<decimal>("Ratio")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<DateTime?>("RegistrationDate")
                         .HasColumnType("datetime2");

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Clinic.API.Entities;
 
@@ -87,6 +88,7 @@ public class Tax
     public string? RegistrationNumber { get; set; }
     public DateTime? RegistrationDate { get; set; }
     public int Status { get; set; } = 1; // 1 = Active, 0 = Inactive
+    [Precision(18, 4)] 
     public decimal Ratio { get; set; } = 0; // Tax percentage, e.g., 15 for 15%
 }
 

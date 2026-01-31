@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Clinic.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260130103306_AddTaxRatio")]
-    partial class AddTaxRatio
+    [Migration("20260131114136_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -80,19 +80,30 @@ namespace Clinic.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("AppointmentId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Note")
-                        .IsRequired()
+                    b.Property<string>("Diagnosis")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("PatientId")
-                        .HasColumnType("int");
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Prescription")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Symptoms")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Treatment")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PatientId");
+                    b.HasIndex("AppointmentId");
 
                     b.ToTable("MedicalNotes");
                 });
@@ -122,18 +133,9 @@ namespace Clinic.API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<decimal?>("Height")
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<string>("OtherMedicalNotes")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal?>("Weight")
-                        .HasColumnType("decimal(5,2)");
 
                     b.HasKey("Id");
 
@@ -173,6 +175,85 @@ namespace Clinic.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Payments");
+                });
+
+            modelBuilder.Entity("Clinic.API.Entities.Permission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Group")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RoutePath")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Permissions");
+                });
+
+            modelBuilder.Entity("Clinic.API.Entities.Role", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Roles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Description = "Full access",
+                            Name = "Admin"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Description = "Access to appointments and patients",
+                            Name = "Doctor"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Description = "Limited access",
+                            Name = "Staff"
+                        });
+                });
+
+            modelBuilder.Entity("Clinic.API.Entities.RolePermission", b =>
+                {
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PermissionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("RoleId", "PermissionId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("RolePermissions");
                 });
 
             modelBuilder.Entity("Clinic.API.Entities.Service", b =>
@@ -422,7 +503,8 @@ namespace Clinic.API.Migrations
                         .HasColumnType("bit");
 
                     b.Property<decimal>("Ratio")
-                        .HasColumnType("decimal(18,2)");
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<DateTime?>("RegistrationDate")
                         .HasColumnType("datetime2");
@@ -471,9 +553,8 @@ namespace Clinic.API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("RoleId")
+                        .HasColumnType("int");
 
                     b.Property<int?>("StaffId")
                         .HasColumnType("int");
@@ -484,6 +565,8 @@ namespace Clinic.API.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("RoleId");
+
                     b.HasIndex("StaffId");
 
                     b.ToTable("Users");
@@ -493,7 +576,7 @@ namespace Clinic.API.Migrations
                         {
                             Id = 1,
                             PasswordHash = "1BDF7BABB5FB79DD23C5E743207594513236923AC552132A3CE334637215DAE0-E5D489B2753578736047D93A8AB484BF",
-                            Role = "superadmin",
+                            RoleId = 1,
                             Username = "admin"
                         });
                 });
@@ -519,13 +602,32 @@ namespace Clinic.API.Migrations
 
             modelBuilder.Entity("Clinic.API.Entities.MedicalNote", b =>
                 {
-                    b.HasOne("Clinic.API.Entities.Patient", "Patient")
-                        .WithMany("MedicalNotes")
-                        .HasForeignKey("PatientId")
+                    b.HasOne("Clinic.API.Entities.Appointment", "Appointment")
+                        .WithMany()
+                        .HasForeignKey("AppointmentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Patient");
+                    b.Navigation("Appointment");
+                });
+
+            modelBuilder.Entity("Clinic.API.Entities.RolePermission", b =>
+                {
+                    b.HasOne("Clinic.API.Entities.Permission", "Permission")
+                        .WithMany()
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Clinic.API.Entities.Role", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
                 });
 
             modelBuilder.Entity("Clinic.API.Entities.ServiceAssignment", b =>
@@ -597,10 +699,18 @@ namespace Clinic.API.Migrations
 
             modelBuilder.Entity("Clinic.API.Entities.User", b =>
                 {
+                    b.HasOne("Clinic.API.Entities.Role", "Role")
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("Clinic.API.Entities.Staff", "Staff")
                         .WithMany()
                         .HasForeignKey("StaffId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Role");
 
                     b.Navigation("Staff");
                 });
@@ -608,8 +718,11 @@ namespace Clinic.API.Migrations
             modelBuilder.Entity("Clinic.API.Entities.Patient", b =>
                 {
                     b.Navigation("Appointments");
+                });
 
-                    b.Navigation("MedicalNotes");
+            modelBuilder.Entity("Clinic.API.Entities.Role", b =>
+                {
+                    b.Navigation("RolePermissions");
                 });
 
             modelBuilder.Entity("Clinic.API.Entities.Service", b =>
