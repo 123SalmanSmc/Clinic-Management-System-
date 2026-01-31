@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography;
+using BCrypt.Net;
 
 namespace Clinic.API.Data
 {
@@ -26,6 +27,21 @@ namespace Clinic.API.Data
         public bool Verify(string password, string hashWithSalt)
         {
             // 1. Split the stored hash string to get the hash and the salt
+            // Support both PBKDF2(hexHash-hexSalt) and bcrypt ($2a$...) stored hashes
+            if (string.IsNullOrWhiteSpace(hashWithSalt)) return false;
+
+            if (hashWithSalt.StartsWith("$2a$") || hashWithSalt.StartsWith("$2b$") || hashWithSalt.StartsWith("$2y$"))
+            {
+                try
+                {
+                    return BCrypt.Net.BCrypt.Verify(password, hashWithSalt);
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
             string[] parts = hashWithSalt.Split('-');
             if (parts.Length != 2)
             {

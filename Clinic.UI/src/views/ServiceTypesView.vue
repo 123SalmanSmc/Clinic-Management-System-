@@ -40,8 +40,23 @@ const fetchData = async () => {
       serviceTypesApi.getAll(),
       servicesApi.getAll()
     ])
-    serviceTypes.value = typesRes.data
-    services.value = servicesRes.data
+
+    // Normalize casing (API may return PascalCase or camelCase)
+    services.value = (servicesRes.data || []).map(s => ({
+      ...s,
+      id: s.id ?? s.Id,
+      serviceName: s.serviceName ?? s.ServiceName ?? s.serviceName,
+    }))
+
+    serviceTypes.value = (typesRes.data || []).map(t => ({
+      ...t,
+      id: t.id ?? t.Id,
+      serviceTypeName: t.serviceTypeName ?? t.ServiceTypeName ?? t.serviceTypeName,
+      serviceName: t.serviceName ?? t.ServiceName ?? t.serviceName,
+      description: t.description ?? t.Description ?? t.description,
+      cost: t.cost ?? t.Cost ?? 0,
+      serviceId: t.serviceId ?? t.ServiceId ?? t.serviceId
+    }))
   } catch (e) {
     error.value = 'Failed to load service types'
     console.error(e)
@@ -56,7 +71,7 @@ const openAddModal = () => {
     ServiceTypeName: '', 
     Cost: 0, 
     Description: '',
-    ServiceId: services.value[0]?.id || null 
+    ServiceId: services.value[0]?.id ?? services.value[0]?.Id || null 
   }
   showModal.value = true
 }
@@ -65,10 +80,10 @@ const openEditModal = (item) => {
   isEditing.value = true
   selectedItem.value = item
   formData.value = { 
-    ServiceTypeName: item.ServiceTypeName, 
-    Cost: item.Cost, 
-    Description: item.Description || '',
-    ServiceId: item.ServiceId 
+    ServiceTypeName: item.serviceTypeName ?? item.ServiceTypeName,
+    Cost: item.cost ?? item.Cost,
+    Description: item.description ?? item.Description || '',
+    ServiceId: item.serviceId ?? item.ServiceId
   }
   showModal.value = true
 }
@@ -141,9 +156,9 @@ const formatCurrency = (amount) => '$' + (amount || 0).toFixed(2)
           </tr>
           <tr v-for="item in filteredItems" :key="item.id">
             <td>{{ item.id }}</td>
-            <td>{{ item.ServiceTypeName }}</td>
-            <td>{{ item.ServiceName || '-' }}</td>
-            <td>{{ formatCurrency(item.Cost) }}</td>
+            <td>{{ item.serviceTypeName ?? item.ServiceTypeName }}</td>
+            <td>{{ item.serviceName ?? item.ServiceName || '-' }}</td>
+            <td>{{ formatCurrency(item.cost ?? item.Cost) }}</td>
             <td>
               <button class="btn-icon" title="Edit" @click="openEditModal(item)">✏️</button>
               <button class="btn-icon" title="Delete" @click="handleDelete(item)">🗑️</button>
